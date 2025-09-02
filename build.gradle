@@ -3,6 +3,7 @@ plugins {
     id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.107'
     id 'idea'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 tasks.named('wrapper', Wrapper).configure {
@@ -18,7 +19,9 @@ version = mod_version
 group = mod_group_id
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
+    maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
+    mavenCentral()
 }
 
 base {
@@ -112,29 +115,54 @@ configurations {
 }
 
 dependencies {
-    // Example optional mod dependency with JEI
-    // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
-    // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"
-    // compileOnly "mezz.jei:jei-${mc_version}-neoforge-api:${jei_version}"
-    // We add the full version to localRuntime, not runtimeOnly, so that we do not publish a dependency on it
-    // localRuntime "mezz.jei:jei-${mc_version}-neoforge:${jei_version}"
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") { transitive = false }
+    implementation("net.createmod.ponder:Ponder-NeoForge-${minecraft_version}:${ponder_version}")
+    compileOnly("dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}")
+    runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
+    implementation("com.tterrag.registrate:Registrate:${registrate_version}")
 
-    // Example mod dependency using a mod jar from ./libs with a flat dir repository
-    // This maps to ./libs/coolmod-${mc_version}-${coolmod_version}.jar
-    // The group id is ignored when searching -- in this case, it is "blank"
-    // implementation "blank:coolmod-${mc_version}:${coolmod_version}"
+    jarJar(implementation("org.commonmark:commonmark")) {
+        version {
+            strictly '[0.1, 1.0)'
+            prefer '0.21.0' // The version actually used in your dev workspace
+        }
+    }
+    additionalRuntimeClasspath "org.commonmark:commonmark:0.21.0"
+    jarJar(implementation("io.undertow:undertow-core")) {
+        version {
+            strictly '[2.0, 3.0)'
+            prefer '2.3.18.Final' // The version actually used in your dev workspace
+        }
+    }
+    additionalRuntimeClasspath "io.undertow:undertow-core"
 
-    // Example mod dependency using a file as dependency
-    // implementation files("libs/coolmod-${mc_version}-${coolmod_version}.jar")
+    jarJar(implementation("io.undertow:undertow-websockets-jsr")) {
+        version {
+            strictly '[2.0, 3.0)'
+            prefer '2.3.18.Final'
+        }
+    }
+    additionalRuntimeClasspath "io.undertow:undertow-websockets-jsr:2.3.18.Final"
 
-    // Example project dependency using a sister or child project:
-    // implementation project(":myproject")
+    jarJar(implementation("io.undertow:undertow-servlet")) {
+        version {
+            strictly '[2.0, 3.0)'
+            prefer '2.3.18.Final' // The version actually used in your dev workspace
+        }
+    }
+    additionalRuntimeClasspath "io.undertow:undertow-servlet:2.3.18.Final"
 
-    // For more info:
-    // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
-    // http://www.gradle.org/docs/current/userguide/dependency_management.html
+    jarJar(implementation("com.fasterxml.jackson.core:jackson-databind")) {
+        version {
+            strictly '[2.0, 3.0)'
+            prefer '2.20.0' // The version actually used in your dev workspace
+        }
+    }
+    additionalRuntimeClasspath "com.fasterxml.jackson.core:jackson-databind:2.20.0"
+
+
+
 }
-
 // This block of code expands all declared replace properties in the specified resource targets.
 // A missing property will result in an error. Properties are expanded using ${} Groovy notation.
 var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
@@ -172,6 +200,8 @@ publishing {
         maven {
             url "file://${project.projectDir}/repo"
         }
+        maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
+        maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate
     }
 }
 
