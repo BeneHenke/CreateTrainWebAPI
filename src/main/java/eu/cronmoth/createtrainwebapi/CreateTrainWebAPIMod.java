@@ -45,9 +45,7 @@ public class CreateTrainWebAPIMod {
     // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
 
-    private ObjectMapper mapper = new ObjectMapper();
-
-    private Undertow server;
+    ApiServer apiServer = new ApiServer();
 
     public CreateTrainWebAPIMod(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.register(this);
@@ -57,52 +55,12 @@ public class CreateTrainWebAPIMod {
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        server.stop();
+        apiServer.stop();
     }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) throws Exception {
-        // Do something when the server starts
-        LOGGER.info("HELLO from server starting");
-        PathHandler pathHandler = new PathHandler();
-        // HTTP GET
-        pathHandler.addExactPath("/trains", exchange -> {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
-            exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetTrainData()));
-        });
-
-        // WebSocket endpoint
-        WebSocketProtocolHandshakeHandler wsHandler = new WebSocketProtocolHandshakeHandler(
-                new WebSocketConnectionCallback() {
-                    @Override
-                    public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
-                        channel.getReceiveSetter().set(new AbstractReceiveListener() {
-                            @Override
-                            protected void onFullTextMessage(WebSocketChannel ch, BufferedTextMessage message) {
-                                String msg = message.getData();
-                                WebSockets.sendText(msg, ch, null); // Use WebSockets.sendText from io.undertow.websockets.core
-                            }
-                        });
-                        channel.resumeReceives();
-                    }
-                }
-        );
-
-        pathHandler.addExactPath("/ws", wsHandler);
-
-        server = Undertow.builder()
-                .addHttpListener(8080, "localhost")
-                .setHandler(pathHandler)
-                .build();
-
-        server.start();
-        System.out.println("Server started on http://localhost:8080 and ws://localhost:8080/ws");
-        GlobalRailwayManager railway = Create.RAILWAYS;
-        Map <UUID, Train> trains = railway.trains;
-
-        for (UUID uuid : trains.keySet()) {
-            Train train = trains.get(uuid);
-        }
+        apiServer.start();
     }
 }
