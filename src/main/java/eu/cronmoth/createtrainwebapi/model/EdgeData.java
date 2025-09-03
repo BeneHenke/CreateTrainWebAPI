@@ -1,11 +1,14 @@
 package eu.cronmoth.createtrainwebapi.model;
 
-import java.util.List;
+import com.simibubi.create.content.trains.graph.TrackEdge;
 
 public class EdgeData {
-    public String dimension;
-    public List<PointData> path;
-    public EdgeData(String dimension, List<PointData> path) {
-        this.dimension = dimension; this.path = path;
+    public int node1;
+    public int node2;
+
+    public EdgeData(TrackEdge trackEdge) {
+        node1 = trackEdge.node1.getNetId();
+        node2 = trackEdge.node2.getNetId();
+        
     }
 }
