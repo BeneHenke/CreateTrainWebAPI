@@ -7,6 +7,11 @@ import com.simibubi.create.content.trains.graph.TrackEdge;
 import com.simibubi.create.content.trains.graph.TrackGraph;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import com.simibubi.create.content.trains.graph.TrackNodeLocation;
+import com.simibubi.create.content.trains.signal.SignalBlock;
+import com.simibubi.create.content.trains.signal.SignalBoundary;
+import com.simibubi.create.content.trains.signal.SignalEdgeGroup;
+import com.simibubi.create.content.trains.signal.TrackEdgePoint;
+import com.simibubi.create.content.trains.station.GlobalStation;
 import eu.cronmoth.createtrainwebapi.model.*;
 
 import java.util.*;
@@ -27,18 +32,42 @@ public class TrackInformation {
     public static List<NetworkData> GetNetworkData() {
         Map<UUID, TrackGraph> graphs = railway.trackNetworks;
         List<NetworkData> data = new ArrayList<>();
+        // For each graph, extract nodes and edges
         for (UUID uuid : graphs.keySet()) {
             Set<NodeData> nodes = new HashSet<>();
             Set<EdgeData> edges = new HashSet<>();
             TrackGraph trackGraph = graphs.get(uuid);
             Set<TrackNodeLocation> trackNodes = trackGraph.getNodes();
+            Set<EdgeWrapper> trackEdges = new HashSet<>();
+            // For each node, extract its data and connected edges
             for (TrackNodeLocation trackNodeLocation : trackNodes) {
                 TrackNode node = trackGraph.locateNode(trackNodeLocation);
                 nodes.add(new NodeData(node));
                 Map<TrackNode, TrackEdge> nodeEdgeMap = trackGraph.getConnectionsFrom(node);
+                // Find all edges
                 for (TrackEdge trackEdge : nodeEdgeMap.values()) {
-                    edges.add(new EdgeData(trackEdge));
+                    trackEdges.add(new EdgeWrapper(trackEdge));
                 }
+            }
+            for (EdgeWrapper edgeWrapper : trackEdges) {
+                TrackEdge trackEdge = edgeWrapper.trackEdge;
+                List<TrackEdgePoint> edgePoints = trackEdge.getEdgeData().getPoints();
+                boolean forward = true;
+                boolean backward = true;
+                // Determine directionality based on edge points
+                for (TrackEdgePoint trackEdgePoint : edgePoints) {
+                    if (trackEdgePoint instanceof GlobalStation) {
+                        GlobalStation station = (GlobalStation) trackEdgePoint;
+                        TrackNode primary = trackGraph.locateNode(station.edgeLocation.getSecond());
+                    }
+                    else if (trackEdgePoint instanceof SignalBoundary) {
+                        //Block Entity Maps hold enttities for each direction. CanNavigate checks if both direction are set.
+                        SignalBoundary signalBoundary = (SignalBoundary) trackEdgePoint;
+                        forward = signalBoundary.canNavigateVia(trackEdge.node1);
+                        backward = signalBoundary.canNavigateVia(trackEdge.node2);
+                    }
+                }
+                edges.add(new EdgeData(trackEdge, forward, backward));
             }
             data.add(new NetworkData(nodes, edges));
         }

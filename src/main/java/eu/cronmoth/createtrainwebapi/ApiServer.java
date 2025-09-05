@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.undertow.Undertow;
 import io.undertow.server.handlers.PathHandler;
 import io.undertow.util.Headers;
+import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -26,6 +27,7 @@ public class ApiServer {
 
         pathHandler.addExactPath("/network", exchange -> {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
             exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetNetworkData()));
         });
 
