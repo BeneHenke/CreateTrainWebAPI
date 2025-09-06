@@ -63,8 +63,10 @@ public class TrackInformation {
                     else if (trackEdgePoint instanceof SignalBoundary) {
                         //Block Entity Maps hold enttities for each direction. CanNavigate checks if both direction are set.
                         SignalBoundary signalBoundary = (SignalBoundary) trackEdgePoint;
-                        forward = signalBoundary.canNavigateVia(trackEdge.node1);
-                        backward = signalBoundary.canNavigateVia(trackEdge.node2);
+                        if (signalBoundary.blockEntities.either(Map::isEmpty)) {
+                            forward = !signalBoundary.canNavigateVia(trackEdge.node1);
+                            backward = !signalBoundary.canNavigateVia(trackEdge.node2);
+                        }
                     }
                 }
                 edges.add(new EdgeData(trackEdge, forward, backward));

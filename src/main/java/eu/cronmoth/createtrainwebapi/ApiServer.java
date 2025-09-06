@@ -21,7 +21,8 @@ public class ApiServer {
         PathHandler pathHandler = new PathHandler();
         // HTTP GET
         pathHandler.addExactPath("/trains", exchange -> {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/plain");
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
             exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetTrainData()));
         });
 
@@ -41,7 +42,6 @@ public class ApiServer {
             exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetBlockData()));
         });
 
-        // WebSocket endpoint
         WebSocketProtocolHandshakeHandler wsHandler = new WebSocketProtocolHandshakeHandler(
                 new WebSocketConnectionCallback() {
                     @Override
@@ -54,6 +54,16 @@ public class ApiServer {
                             }
                         });
                         channel.resumeReceives();
+                        while (true) {
+                            try {
+                                String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
+                                WebSockets.sendText(update, channel, null);
+                                Thread.sleep(50); // Send updates every second
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                break;
+                            }
+                        }
                     }
                 }
         );

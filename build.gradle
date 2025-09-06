@@ -121,13 +121,6 @@ dependencies {
     runtimeOnly("dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}")
     implementation("com.tterrag.registrate:Registrate:${registrate_version}")
 
-    jarJar(implementation("org.commonmark:commonmark")) {
-        version {
-            strictly '[0.1, 1.0)'
-            prefer '0.21.0' // The version actually used in your dev workspace
-        }
-    }
-    additionalRuntimeClasspath "org.commonmark:commonmark:0.21.0"
     jarJar(implementation("io.undertow:undertow-core")) {
         version {
             strictly '[2.0, 3.0)'
