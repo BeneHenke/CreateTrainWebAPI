@@ -29,24 +29,28 @@ public class TrackInformation {
         return data;
     }
 
-    public static List<NetworkData> GetNetworkData() {
+    public static NetworkData GetNetworkData() {
         Map<UUID, TrackGraph> graphs = railway.trackNetworks;
-        List<NetworkData> data = new ArrayList<>();
         // For each graph, extract nodes and edges
+        Set<NodeData> nodes = new HashSet<>();
+        Set<EdgeData> edges = new HashSet<>();
+        Set<StationData> stations = new HashSet<>();
         for (UUID uuid : graphs.keySet()) {
-            Set<NodeData> nodes = new HashSet<>();
-            Set<EdgeData> edges = new HashSet<>();
             TrackGraph trackGraph = graphs.get(uuid);
             Set<TrackNodeLocation> trackNodes = trackGraph.getNodes();
             Set<EdgeWrapper> trackEdges = new HashSet<>();
             // For each node, extract its data and connected edges
             for (TrackNodeLocation trackNodeLocation : trackNodes) {
                 TrackNode node = trackGraph.locateNode(trackNodeLocation);
-                nodes.add(new NodeData(node));
+                NodeData nodeData = new NodeData(node);
+                nodes.add(nodeData);
                 Map<TrackNode, TrackEdge> nodeEdgeMap = trackGraph.getConnectionsFrom(node);
                 // Find all edges
                 for (TrackEdge trackEdge : nodeEdgeMap.values()) {
                     trackEdges.add(new EdgeWrapper(trackEdge));
+                    if (trackEdge.isInterDimensional()) {
+                        nodeData.interDimensional = true;
+                    }
                 }
             }
             for (EdgeWrapper edgeWrapper : trackEdges) {
@@ -58,7 +62,7 @@ public class TrackInformation {
                 for (TrackEdgePoint trackEdgePoint : edgePoints) {
                     if (trackEdgePoint instanceof GlobalStation) {
                         GlobalStation station = (GlobalStation) trackEdgePoint;
-                        TrackNode primary = trackGraph.locateNode(station.edgeLocation.getSecond());
+                        stations.add(new StationData(station, trackGraph));
                     }
                     else if (trackEdgePoint instanceof SignalBoundary) {
                         //Block Entity Maps hold enttities for each direction. CanNavigate checks if both direction are set.
@@ -71,9 +75,9 @@ public class TrackInformation {
                 }
                 edges.add(new EdgeData(trackEdge, forward, backward));
             }
-            data.add(new NetworkData(nodes, edges));
+
         }
-        return data;
+        return new NetworkData(nodes, edges, stations);
     }
 
     public static List<SignalData> GetSignalData() {

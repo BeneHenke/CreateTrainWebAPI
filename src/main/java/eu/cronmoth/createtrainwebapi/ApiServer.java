@@ -54,11 +54,11 @@ public class ApiServer {
                             }
                         });
                         channel.resumeReceives();
-                        while (true) {
+                        while (channel.isOpen()) {
                             try {
                                 String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
                                 WebSockets.sendText(update, channel, null);
-                                Thread.sleep(50); // Send updates every second
+                                Thread.sleep(200);
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 break;

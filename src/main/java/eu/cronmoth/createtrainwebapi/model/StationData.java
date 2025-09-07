@@ -1,16 +1,23 @@
 package eu.cronmoth.createtrainwebapi.model;
 
+import com.simibubi.create.content.trains.graph.TrackGraph;
+import com.simibubi.create.content.trains.station.GlobalStation;
+
 import java.util.UUID;
 
 public class StationData {
     public UUID id;
     public String name;
-    public String dimension;
-    public PointData location;
-    public double angle;
     public boolean assembling;
-    public StationData(UUID id, String name, String dimension, PointData location, double angle, boolean assembling) {
-        this.id = id; this.name = name; this.dimension = dimension; this.location = location;
-        this.angle = angle; this.assembling = assembling;
+    public double positionOnTrack;
+    public NodeData node1;
+    public NodeData node2;
+    public StationData(GlobalStation station, TrackGraph graph) {
+        id = station.id;
+        name = station.name.toString();
+        assembling = station.assembling;
+        positionOnTrack = station.position;
+        node1 = new NodeData(graph.locateNode(station.edgeLocation.getFirst()));
+        node2 = new NodeData(graph.locateNode(station.edgeLocation.getSecond()));
     }
 }
