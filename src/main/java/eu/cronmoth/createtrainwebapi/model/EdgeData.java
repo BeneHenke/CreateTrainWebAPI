@@ -1,14 +1,13 @@
 package eu.cronmoth.createtrainwebapi.model;
 
 import com.simibubi.create.content.trains.graph.TrackEdge;
-import com.simibubi.create.content.trains.track.BezierConnection;
 
 public class EdgeData {
     public int node1;
     public int node2;
     public boolean forwards;
     public boolean backwards;
-    public BezierCurve bezierConnection;
+    public BezierCurveData bezierConnection;
 
     public EdgeData(TrackEdge trackEdge, boolean forwards, boolean backwards) {
         node1 = trackEdge.node1.getNetId();
@@ -16,7 +15,7 @@ public class EdgeData {
         this.forwards = forwards;
         this.backwards = backwards;
         if (trackEdge.getTurn()!=null) {
-            bezierConnection = new BezierCurve(trackEdge.getTurn());
+            bezierConnection = new BezierCurveData(trackEdge.getTurn());
         }
     }
 }

@@ -3,13 +3,13 @@ package eu.cronmoth.createtrainwebapi.model;
 import com.simibubi.create.content.trains.track.BezierConnection;
 import net.minecraft.world.phys.Vec3;
 
-public class BezierCurve {
+public class BezierCurveData {
     public PointData p0;
     public PointData p1;
     public PointData p2;
     public PointData p3;
 
-    public BezierCurve(BezierConnection bezierConnection) {
+    public BezierCurveData(BezierConnection bezierConnection) {
         Vec3 start = bezierConnection.starts.getFirst();
         Vec3 end = bezierConnection.starts.getSecond();
         Vec3 startAxis = bezierConnection.axes.getFirst();

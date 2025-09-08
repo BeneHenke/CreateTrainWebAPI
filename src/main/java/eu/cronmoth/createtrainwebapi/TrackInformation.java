@@ -79,14 +79,4 @@ public class TrackInformation {
         }
         return new NetworkData(nodes, edges, stations);
     }
-
-    public static List<SignalData> GetSignalData() {
-        // TODO: Extract signals, their sides, states, blocks
-        return new ArrayList<>();
-    }
-
-    public static List<BlockData> GetBlockData() {
-        // TODO: Extract blocks, occupancy, reservation, segments
-        return new ArrayList<>();
-    }
 }

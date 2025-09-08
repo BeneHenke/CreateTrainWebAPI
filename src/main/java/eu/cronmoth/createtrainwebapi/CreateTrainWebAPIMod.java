@@ -51,6 +51,7 @@ public class CreateTrainWebAPIMod {
         NeoForge.EVENT_BUS.register(this);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
     }
 
     @SubscribeEvent
@@ -61,6 +62,8 @@ public class CreateTrainWebAPIMod {
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) throws Exception {
-        apiServer.start();
+        String host = Config.SERVER_HOST.get();
+        int port = Config.SERVER_PORT.get();
+        apiServer.start(host, port);
     }
 }

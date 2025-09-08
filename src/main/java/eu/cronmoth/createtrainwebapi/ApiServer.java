@@ -2,22 +2,24 @@ package eu.cronmoth.createtrainwebapi;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.undertow.Undertow;
+import io.undertow.server.HttpHandler;
+import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.PathHandler;
+import io.undertow.server.handlers.sse.ServerSentEventConnectionCallback;
+import io.undertow.server.handlers.sse.ServerSentEventHandler;
 import io.undertow.util.Headers;
 import io.undertow.util.HttpString;
-import io.undertow.websockets.WebSocketConnectionCallback;
-import io.undertow.websockets.WebSocketProtocolHandshakeHandler;
-import io.undertow.websockets.core.AbstractReceiveListener;
-import io.undertow.websockets.core.BufferedTextMessage;
-import io.undertow.websockets.core.WebSocketChannel;
-import io.undertow.websockets.core.WebSockets;
-import io.undertow.websockets.spi.WebSocketHttpExchange;
+
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ScheduledFuture;
 
 public class ApiServer {
     private Undertow server;
     private ObjectMapper mapper = new ObjectMapper();
 
-    public void start() {
+    public void start(String host, int port) {
         PathHandler pathHandler = new PathHandler();
         // HTTP GET
         pathHandler.addExactPath("/trains", exchange -> {
@@ -32,52 +34,44 @@ public class ApiServer {
             exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetNetworkData()));
         });
 
-        pathHandler.addExactPath("/signals", exchange -> {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetSignalData()));
-        });
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
-        pathHandler.addExactPath("/blocks", exchange -> {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.getResponseSender().send(mapper.writeValueAsString(TrackInformation.GetBlockData()));
-        });
-
-        WebSocketProtocolHandshakeHandler wsHandler = new WebSocketProtocolHandshakeHandler(
-                new WebSocketConnectionCallback() {
+        pathHandler.addExactPath("/trainsLive",
+                new HttpHandler() {
                     @Override
-                    public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
-                        channel.getReceiveSetter().set(new AbstractReceiveListener() {
-                            @Override
-                            protected void onFullTextMessage(WebSocketChannel ch, BufferedTextMessage message) {
-                                String msg = message.getData();
-                                WebSockets.sendText(msg, ch, null); // Use WebSockets.sendText from io.undertow.websockets.core
-                            }
-                        });
-                        channel.resumeReceives();
-                        while (channel.isOpen()) {
-                            try {
-                                String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
-                                WebSockets.sendText(update, channel, null);
-                                Thread.sleep(200);
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                break;
-                            }
-                        }
+                    public void handleRequest(HttpServerExchange exchange) throws Exception {
+                        exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
+                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/event-stream");
+                        new ServerSentEventHandler(
+                                new ServerSentEventConnectionCallback() {
+                                    @Override
+                                    public void connected(io.undertow.server.handlers.sse.ServerSentEventConnection connection, String lastEventId) {
+                                        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
+                                            if (connection.isOpen()) {
+                                                try {
+                                                    String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
+                                                    connection.send(update);
+                                                } catch (Exception e) {
+                                                    e.printStackTrace();
+                                                }
+                                            }
+                                        }, 0, 200, TimeUnit.MILLISECONDS);
+
+                                        connection.addCloseTask(conn -> future.cancel(false));
+                                    }
+                                }
+                        ).handleRequest(exchange);
                     }
                 }
         );
 
-        pathHandler.addExactPath("/ws", wsHandler);
-
         server = Undertow.builder()
-                .addHttpListener(8080, "localhost")
+                .addHttpListener(port, host)
                 .setHandler(pathHandler)
                 .build();
 
         server.start();
     }
-
     public void stop() {
         server.stop();
     }
