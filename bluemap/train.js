@@ -1,9 +1,55 @@
+const host = "https://minecraft.game-analytics.net/ctm";
+const visibleThroughTerrain = true;
+
+let elements = [];
+function createButton(link, text, newTab = false, onclick = null) {
+    const buttonTemplate = document.createElement("template");
+    buttonTemplate.innerHTML = `
+	<a style="text-decoration: none" href="${link}" ${newTab ? 'target="_blank"' : ""}>
+		<div class="simple-button">
+			<div class="label">${text}</div>
+		</div>
+	</a>
+	`.trim();
+    const button = buttonTemplate.content.firstChild;
+    if (onclick) {
+        // If a click handler is provided, add it to the inner div
+        button.querySelector('.simple-button').onclick = onclick;
+        // Prevent link navigation
+        button.href = "javascript:void(0)";
+        button.removeAttribute('href');
+    }
+    elements.push(button);
+}
+
+// --- Custom Button: Train Overlay ---
+createButton(
+    "#", // or "javascript:void(0)" to avoid navigation
+    "Train Overlay",
+    false,
+    () => {
+        scene.visible = !scene.visible;
+    }
+);
+
+// --- Periodic Sidebar Injection ---
+setInterval(() => {
+    const buttonList = document.querySelector(".side-menu .content")?.children.item(0);
+    if (!buttonList) return; // Sidebar is not open
+
+    // Only append if not already present
+    if (!Array.from(buttonList.children).some(el =>
+        elements.includes(el)
+    )) {
+        buttonList.append(...elements);
+    }
+}, 100);
+
+//Network and rendering setup
 const mapViewer = window.bluemap.mapViewer;
 const renderer = mapViewer.renderer;
 const THREE = window.BlueMap.Three;
 const scene = new THREE.Scene();
-
-const host = "https://minecraft.game-analytics.net/ctm";
 
 // Line setup (prefer BlueMap's thick lines if available)
 let LineMaterial = THREE.LineBasicMaterial,
@@ -43,7 +89,6 @@ const objects = {
 };
 
 let networkData = null;
-let portalsData = [];
 let trainsData = [];
 let lastTrainState = new Map();
 
@@ -409,7 +454,9 @@ window.addEventListener("resize", () => {
 
 function renderLoop() {
     animateTrains();
-    renderer.clearDepth();
+    if (visibleThroughTerrain) {
+        renderer.clearDepth();
+    }
     renderer.render(scene, mapViewer.camera);
     requestAnimationFrame(renderLoop);
 }

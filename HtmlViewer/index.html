@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Rail Network Visualizer</title>
+  <script src="js/script.js" defer></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #eef2f7;
+    }
+
+    #container {
+      max-width: 1200px;
+      margin: 32px auto;
+      background: #fff;
+      padding: 2em;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px #0001;
+    }
+
+    #canvas-container {
+      position: relative;
+      width: 800px;
+      height: 600px;
+    }
+
+    canvas {
+      position: absolute;
+      border: black solid 2px;
+      top: 0;
+      left: 0;
+    }
+
+    #toggle-dimension {
+      margin-bottom: 1em;
+      padding: 0.5em 1em;
+      font-size: 1em;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      background: #f5f7fc;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #toggle-dimension.active {
+      background: #cce5ff;
+      border-color: #339af0;
+    }
+
+    .error {
+      color: #a00;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <h2>Minecraft Rail Network Visualizer</h2>
+    <button id="toggle-dimension">Switch to Nether</button>
+    <div id="canvas-container">
+      <canvas id="network-bg-ow" width="800" height="600"></canvas>
+      <canvas id="network-trains-ow" width="800" height="600"></canvas>
+      <canvas id="network-bg-nether" width="800" height="600" style="display:none"></canvas>
+      <canvas id="network-trains-nether" width="800" height="600" style="display:none"></canvas>
+    </div>
+    <div id="info"></div>
+    <div id="error" class="error"></div>
+  </div>
+</body>
+</html>
