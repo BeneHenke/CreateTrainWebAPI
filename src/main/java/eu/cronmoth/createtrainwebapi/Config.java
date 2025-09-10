@@ -15,7 +15,7 @@ public class Config {
             .defineInRange("serverPort", 8080, 1, 65535);
     public static final ModConfigSpec.ConfigValue<String> SERVER_HOST = BUILDER
             .comment("Webserver hostname")
-            .define("serverHost", "localhost");
+            .define("serverHost", "0.0.0.0");
 
     static final ModConfigSpec SPEC = BUILDER.build();
 
