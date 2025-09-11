@@ -1,47 +1,46 @@
 const host = "https://minecraft.game-analytics.net/ctm";
 const visibleThroughTerrain = true;
 
-let elements = [];
-function createButton(link, text, newTab = false, onclick = null) {
+let button;
+function createMenuButton() {
+    button = document.createElement("div");
+    button.className = "simple-button";
+    button.style.cursor = "pointer";
+    button.innerHTML = `<div class="label">Train Overlay</div><div class="submenu-icon"><svg viewBox="0 0 30 30"><path d="M25.004,9.294c0,0.806-0.75,1.46-1.676,1.46H6.671c-0.925,0-1.674-0.654-1.674-1.46l0,0
+\tc0-0.807,0.749-1.461,1.674-1.461h16.657C24.254,7.833,25.004,8.487,25.004,9.294L25.004,9.294z"></path><path d="M25.004,20.706c0,0.807-0.75,1.461-1.676,1.461H6.671c-0.925,0-1.674-0.654-1.674-1.461l0,0
+\tc0-0.807,0.749-1.461,1.674-1.461h16.657C24.254,19.245,25.004,19.899,25.004,20.706L25.004,20.706z"></path></svg></div>`;
+    button.onclick = () => {
+        const buttonList = document.querySelector(".side-menu .content")?.children.item(0);
+        while (buttonList.firstChild) {
+            buttonList.removeChild(buttonList.firstChild);
+        }
+        buttonList.appendChild(createButton("Toggle Visibility", () => {scene.visible = !scene.visible;}));
+    };
+}
+function createButton(text, onclick = null) {
     const buttonTemplate = document.createElement("template");
     buttonTemplate.innerHTML = `
-	<a style="text-decoration: none" href="${link}" ${newTab ? 'target="_blank"' : ""}>
 		<div class="simple-button">
 			<div class="label">${text}</div>
 		</div>
-	</a>
 	`.trim();
     const button = buttonTemplate.content.firstChild;
     if (onclick) {
-        // If a click handler is provided, add it to the inner div
-        button.querySelector('.simple-button').onclick = onclick;
-        // Prevent link navigation
-        button.href = "javascript:void(0)";
-        button.removeAttribute('href');
+        button.onclick = onclick;
     }
-    elements.push(button);
+    return button;
 }
+createMenuButton();
 
-// --- Custom Button: Train Overlay ---
-createButton(
-    "#", // or "javascript:void(0)" to avoid navigation
-    "Train Overlay",
-    false,
-    () => {
-        scene.visible = !scene.visible;
-    }
-);
-
-// --- Periodic Sidebar Injection ---
 setInterval(() => {
     const buttonList = document.querySelector(".side-menu .content")?.children.item(0);
-    if (!buttonList) return; // Sidebar is not open
+    if (!buttonList) return;
 
-    // Only append if not already present
-    if (!Array.from(buttonList.children).some(el =>
-        elements.includes(el)
-    )) {
-        buttonList.append(...elements);
+    if (!Array.from(buttonList.children).some(el => el === button)) {
+        const infoButton = Array.from(buttonList.children).find(el => el.textContent.includes("Info"));
+        if (infoButton && infoButton.nextSibling) {
+            buttonList.insertBefore(button, infoButton.nextSibling);
+        }
     }
 }, 100);
 
