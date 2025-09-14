@@ -1,5 +1,5 @@
 const host = "https://minecraft.game-analytics.net/ctm";
-const visibleThroughTerrain = true;
+let visibleThroughTerrain = true;
 
 let button;
 function createMenuButton() {
@@ -15,6 +15,7 @@ function createMenuButton() {
             buttonList.removeChild(buttonList.firstChild);
         }
         buttonList.appendChild(createButton("Toggle Visibility", () => {scene.visible = !scene.visible;}));
+        buttonList.appendChild(createButton("Toggle visibility through terrain", () => {visibleThroughTerrain = !visibleThroughTerrain;}))
     };
 }
 function createButton(text, onclick = null) {

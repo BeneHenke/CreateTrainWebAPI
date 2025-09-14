@@ -1,0 +1,5 @@
+{
+  "id": "CreateTrainAPI",
+  "entrypoint": "eu.cronmoth.createtrainwebapi.CreateTrainWebAPIMod",
+  "version": "${version}"
+}
