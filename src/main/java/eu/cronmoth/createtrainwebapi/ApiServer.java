@@ -40,52 +40,43 @@ public class ApiServer {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4);
 
         pathHandler.addExactPath("/trainsLive",
-                new HttpHandler() {
-                    @Override
-                    public void handleRequest(HttpServerExchange exchange) throws Exception {
-                        exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
-                        exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/event-stream");
-                        new ServerSentEventHandler(
-                                new ServerSentEventConnectionCallback() {
-                                    @Override
-                                    public void connected(io.undertow.server.handlers.sse.ServerSentEventConnection connection, String lastEventId) {
-                                        ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
-                                            if (connection.isOpen()) {
-                                                try {
-                                                    String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
-                                                    connection.send(update);
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
-                                            }
-                                        }, 0, 200, TimeUnit.MILLISECONDS);
-
-                                        connection.addCloseTask(conn -> future.cancel(false));
+                exchange -> {
+                    exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
+                    exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "text/event-stream");
+                    new ServerSentEventHandler(
+                            (connection, lastEventId) -> {
+                                ScheduledFuture<?> future = scheduler.scheduleAtFixedRate(() -> {
+                                    if (connection.isOpen()) {
+                                        try {
+                                            String update = mapper.writeValueAsString(TrackInformation.GetTrainData());
+                                            connection.send(update);
+                                        } catch (Exception e) {
+                                            e.printStackTrace();
+                                        }
                                     }
-                                }
-                        ).handleRequest(exchange);
-                    }
+                                }, 0, 200, TimeUnit.MILLISECONDS);
+
+                                connection.addCloseTask(conn -> future.cancel(false));
+                            }
+                    ).handleRequest(exchange);
                 }
         );
-        FileResourceManager resourceManager = new FileResourceManager(new File("bluemap/train_models/"), 100);
-        ResourceHandler resourceHandler = new ResourceHandler(resourceManager)
-                .setDirectoryListingEnabled(false)
-                .setWelcomeFiles("index.html");
 
-        HttpHandler trainModelHandler = new HttpHandler() {
-            @Override
-            public void handleRequest(HttpServerExchange exchange) throws Exception {
+        if (new File("bluemap/train_models/").exists()) {
+            FileResourceManager resourceManager = new FileResourceManager(new File("bluemap/train_models/"), 100);
+            ResourceHandler resourceHandler = new ResourceHandler(resourceManager)
+                    .setDirectoryListingEnabled(false);
+            HttpHandler trainModelHandler = exchange -> {
                 exchange.getResponseHeaders().put(new HttpString("Access-Control-Allow-Origin"), "*");
                 resourceHandler.handleRequest(exchange);
-            }
-        };
+            };
 
-        pathHandler.addPrefixPath("/trainModels", trainModelHandler);
+            pathHandler.addPrefixPath("/trainModels", trainModelHandler);
+        }
         server = Undertow.builder()
                 .addHttpListener(port, host)
                 .setHandler(pathHandler)
                 .build();
-
         server.start();
     }
     public void stop() {

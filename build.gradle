@@ -256,7 +256,3 @@ idea {
 tasks.withType(Jar).configureEach {
     zip64 = true
 }
-
-tasks.withType(com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar).configureEach {
-    zip64 = true
-}
