@@ -1,36 +1,28 @@
 package eu.cronmoth.createtrainwebapi;
 
 
+import de.bluecolored.bluemap.core.map.hires.entity.EntityRendererType;
+import de.bluecolored.bluemap.core.util.Key;
+import de.bluecolored.bluemap.core.world.mca.entity.EntityType;
+import eu.cronmoth.createtrainwebapi.rendering.entitymodel.ContraptionEntity;
+import eu.cronmoth.createtrainwebapi.rendering.ContraptionEntityRenderer;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
-@Mod(CreateTrainWebAPIMod.MODID)
-public class CreateTrainWebAPIMod {
-    // Define mod id in a common place for everything to reference
-    public static final String MODID = "createtrainwebapi";
-    // Directly reference a slf4j logger
+public class CreateTrainWebAPIMod implements Runnable {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     ApiServer apiServer = new ApiServer();
 
-    public CreateTrainWebAPIMod(IEventBus modEventBus, ModContainer modContainer) {
-        NeoForge.EVENT_BUS.register(this);
-
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
-
+    private void addBluemapRegistryValues() {
+        EntityRendererType.REGISTRY.register(ContraptionEntityRenderer.TYPE);
+        EntityType.REGISTRY.register(new EntityType.Impl(new Key("create","stationary_contraption"), ContraptionEntity.class));
     }
 
     @SubscribeEvent
@@ -44,5 +36,11 @@ public class CreateTrainWebAPIMod {
         String host = Config.SERVER_HOST.get();
         int port = Config.SERVER_PORT.get();
         apiServer.start(host, port);
+    }
+
+    @Override
+    public void run() {
+        addBluemapRegistryValues();
+        apiServer.start("0.0.0.0", 8080);
     }
 }
