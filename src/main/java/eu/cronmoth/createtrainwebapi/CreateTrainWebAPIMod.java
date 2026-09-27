@@ -24,9 +24,11 @@ public class CreateTrainWebAPIMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     ApiServer apiServer = new ApiServer();
+    LiveSnapshots snapshots = new LiveSnapshots();
 
     public CreateTrainWebAPIMod(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(snapshots);
 
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
@@ -41,6 +43,6 @@ public class CreateTrainWebAPIMod {
         String host = Config.SERVER_HOST.get();
         int port = Config.SERVER_PORT.get();
         String trainModelPath = Config.TRAIN_MODEL_PATH.get();
-        apiServer.start(host, port, trainModelPath);
+        apiServer.start(host, port, trainModelPath, snapshots);
     }
 }
