@@ -11,8 +11,6 @@ scripts: [
 ```
 Clicking a train shows its speed, destination, schedule and cargo; clicking a station shows the next arrivals; clicking a portal jumps to the map of the other dimension. If BlueMap is served over https, the API must be reachable over https as well (browsers block mixed content).
 
-Each dimension needs a BlueMap map whose name contains the dimension's name in brackets, e.g. `world (overworld)` or `world (worldname)` for `lith_dim:worldname`.
-
 When used together with https://github.com/BeneHenke/BluemapCreateEntityAddon the path to the train models can be configured in the config aswell.
 
 ## Endpoints
