@@ -38,6 +38,7 @@ public class ApiServer {
         pathHandler.addExactPath("/trains", exchange -> sendJson(exchange, snapshots.trains()));
         pathHandler.addExactPath("/network", exchange -> sendJson(exchange, snapshots.network()));
         pathHandler.addExactPath("/status", exchange -> sendJson(exchange, snapshots.status()));
+        pathHandler.addExactPath("/features", exchange -> sendJson(exchange, snapshots.options()));
         pathHandler.addExactPath("/trainsLive", liveStream(snapshots::trains, 200));
         pathHandler.addExactPath("/statusLive", liveStream(snapshots::status, 1000));
 

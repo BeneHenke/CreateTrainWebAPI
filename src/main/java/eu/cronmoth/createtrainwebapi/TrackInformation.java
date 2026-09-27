@@ -22,21 +22,22 @@ public class TrackInformation {
     public static GlobalRailwayManager railway = Create.RAILWAYS;
     private static final int DEPARTURES_PER_STATION = 5;
 
-    public static List<TrainData> GetTrainData(MinecraftServer server) {
+    public static List<TrainData> GetTrainData(MinecraftServer server, DataOptions options) {
         List<TrainData> data = new ArrayList<>();
         for (Train train : railway.trains.values()) {
-            data.add(new TrainData(train, server));
+            data.add(new TrainData(train, server, options));
         }
         return data;
     }
 
-    public static NetworkData GetNetworkData() {
+    public static NetworkData GetNetworkData(DataOptions options) {
         Set<NodeData> nodes = new HashSet<>();
         Set<EdgeData> edges = new HashSet<>();
         Set<StationData> stations = new HashSet<>();
-        List<SignalData> signals = new ArrayList<>();
+        // optional groups stay null when disabled
+        List<SignalData> signals = options.signals() ? new ArrayList<>() : null;
         List<NetworkInfoData> networks = new ArrayList<>();
-        List<PortalData> portals = new ArrayList<>();
+        List<PortalData> portals = options.portals() ? new ArrayList<>() : null;
         for (TrackGraph trackGraph : railway.trackNetworks.values()) {
             networks.add(new NetworkInfoData(trackGraph));
             Set<EdgeWrapper> trackEdges = new HashSet<>();
@@ -68,12 +69,15 @@ public class TrackInformation {
                             forward = !signalBoundary.canNavigateVia(trackEdge.node1);
                             backward = !signalBoundary.canNavigateVia(trackEdge.node2);
                         }
-                        signals.add(new SignalData(signalBoundary, trackEdge));
-                        signalPositions.add(signalBoundary.getLocationOn(trackEdge));
+                        if (signals != null) {
+                            signals.add(new SignalData(signalBoundary, trackEdge));
+                            signalPositions.add(signalBoundary.getLocationOn(trackEdge));
+                        }
                     }
                 }
-                edges.add(new EdgeData(trackEdge, forward, backward, trackGraph, signalSegments(trackEdge, trackGraph, signalPositions)));
-                if (trackEdge.isInterDimensional()) {
+                edges.add(new EdgeData(trackEdge, forward, backward, trackGraph,
+                        signals != null ? signalSegments(trackEdge, trackGraph, signalPositions) : null));
+                if (portals != null && trackEdge.isInterDimensional()) {
                     portals.add(new PortalData(trackEdge));
                 }
             }
@@ -102,22 +106,28 @@ public class TrackInformation {
         return segments;
     }
 
-    public static StatusData GetStatusData() {
-        StatusData status = new StatusData();
-        for (SignalEdgeGroup group : railway.signalEdgeGroups.values()) {
-            if (!group.trains.isEmpty()) {
-                status.occupiedGroups.add(group.id);
-            } else if (group.reserved != null) {
-                status.reservedGroups.add(group.id);
+    public static StatusData GetStatusData(DataOptions options) {
+        StatusData status = new StatusData(options);
+        if (options.signals()) {
+            for (SignalEdgeGroup group : railway.signalEdgeGroups.values()) {
+                if (!group.trains.isEmpty()) {
+                    status.occupiedGroups.add(group.id);
+                } else if (group.reserved != null) {
+                    status.reservedGroups.add(group.id);
+                }
             }
         }
         // arrival predictions are refreshed by Create itself every 100 ticks (5 s)
         for (TrackGraph trackGraph : railway.trackNetworks.values()) {
-            for (SignalBoundary signal : trackGraph.getPoints(EdgePointType.SIGNAL)) {
-                status.signals.put(signal.id, List.of(signal.cachedStates.getFirst().name(), signal.cachedStates.getSecond().name()));
+            if (options.signals()) {
+                for (SignalBoundary signal : trackGraph.getPoints(EdgePointType.SIGNAL)) {
+                    status.signals.put(signal.id, List.of(signal.cachedStates.getFirst().name(), signal.cachedStates.getSecond().name()));
+                }
             }
-            for (GlobalStation station : trackGraph.getPoints(EdgePointType.STATION)) {
-                status.stations.put(station.id, new StatusData.StationStatus(station, DEPARTURES_PER_STATION));
+            if (options.stationArrivals()) {
+                for (GlobalStation station : trackGraph.getPoints(EdgePointType.STATION)) {
+                    status.stations.put(station.id, new StatusData.StationStatus(station, DEPARTURES_PER_STATION));
+                }
             }
         }
         return status;

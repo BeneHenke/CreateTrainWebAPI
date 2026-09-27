@@ -24,7 +24,7 @@ public class CreateTrainWebAPIMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     ApiServer apiServer = new ApiServer();
-    LiveSnapshots snapshots = new LiveSnapshots();
+    LiveSnapshots snapshots = new LiveSnapshots(Config::dataOptions);
 
     public CreateTrainWebAPIMod(IEventBus modEventBus, ModContainer modContainer) {
         NeoForge.EVENT_BUS.register(this);

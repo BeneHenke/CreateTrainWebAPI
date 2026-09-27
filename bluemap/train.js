@@ -54,12 +54,28 @@ function applySettings() {
     updateClickTargetVisibility();
 }
 
+// ---- Optional data ----
+
+// Which optional data the API includes (the "data" section of its config). APIs without /features
+// include everything, so that is the default.
+const features = {
+    owner: true, trainStatus: true, passengers: true, navigation: true, schedule: true, route: true,
+    stationArrivals: true, signals: true, portals: true, cargo: true,
+};
+function fetchFeatures() {
+    return fetch(`${host}/features`)
+        .then(resp => resp.ok ? resp.json() : {})
+        .then(data => Object.assign(features, data))
+        .catch(() => { });
+}
+
+// [label, setting, optional data group the switch needs]
 const menuSwitches = [
     ["Show Lines", "linesVisible"],
     ["Show Trains", "trainsVisible"],
     ["Show Stations & Portals", "stationsVisible"],
-    ["Show Signals", "signalsVisible"],
-    ["Show Occupied Blocks", "occupancyVisible"],
+    ["Show Signals", "signalsVisible", "signals"],
+    ["Show Occupied Blocks", "occupancyVisible", "signals"],
     ["Lines Through Terrain", "linesVisibleThroughTerrain"],
     ["Trains Through Terrain", "trainsVisibleThroughTerrain"],
 ];
@@ -77,7 +93,8 @@ function createMenuButton() {
         while (buttonList.firstChild) {
             buttonList.removeChild(buttonList.firstChild);
         }
-        menuSwitches.forEach(([text, key]) => {
+        menuSwitches.forEach(([text, key, feature]) => {
+            if (feature && !features[feature]) return;
             buttonList.appendChild(createSwitch(text, () => settings[key], () => {
                 settings[key] = !settings[key];
                 applySettings();
@@ -774,9 +791,13 @@ function showTrainPopup(trainId) {
         if (train.ownerName) lines.push(`<div class="cto-muted">Owner: ${escapeHtml(train.ownerName)}</div>`);
         if (train.derailed) lines.push(`<div class="cto-warn">Derailed</div>`);
 
-        const speed = (train.speed ?? 0) * 20; // blocks/tick -> blocks/s
-        const maxSpeed = (train.maxSpeed ?? 0) * 20;
-        lines.push(`<div>${train.stopped ? "Stopped" : `${speed.toFixed(1)} blocks/s`} <span class="cto-muted">(max ${maxSpeed.toFixed(1)} blocks/s)</span></div>`);
+        if (train.speed != null) {
+            const speed = train.speed * 20; // blocks/tick -> blocks/s
+            const maxSpeed = (train.maxSpeed ?? 0) * 20;
+            lines.push(`<div>${train.stopped ? "Stopped" : `${speed.toFixed(1)} blocks/s`} <span class="cto-muted">(max ${maxSpeed.toFixed(1)} blocks/s)</span></div>`);
+        } else if (train.stopped) {
+            lines.push(`<div>Stopped</div>`);
+        }
 
         const nav = train.navigation ?? {};
         if (train.currentStation) {
@@ -787,7 +808,9 @@ function showTrainPopup(trainId) {
         if (nav.waitingForSignal) lines.push(`<div class="cto-warn">Waiting at signal for ${formatTicks(nav.ticksWaitingForSignal)}</div>`);
 
         const schedule = train.schedule;
-        if (schedule) {
+        if (!features.schedule) {
+            // schedules are not provided by the API
+        } else if (schedule) {
             let text = `Schedule${schedule.title ? `: ${escapeHtml(schedule.title)}` : ""} · stop ${schedule.currentEntry + 1}/${schedule.entryCount}`;
             if (schedule.state) text += ` · ${scheduleStates[schedule.state] ?? schedule.state}`;
             if (schedule.paused) text += " · paused";
@@ -797,10 +820,14 @@ function showTrainPopup(trainId) {
         } else {
             lines.push(`<div class="cto-muted">No schedule</div>`);
         }
-        lines.push(`<div class="cto-muted">${train.cars.length} car${train.cars.length === 1 ? "" : "s"} · ${train.passengers ?? 0} passenger${train.passengers === 1 ? "" : "s"}</div>`);
+        let carsText = `${train.cars.length} car${train.cars.length === 1 ? "" : "s"}`;
+        if (train.passengers != null) carsText += ` · ${train.passengers} passenger${train.passengers === 1 ? "" : "s"}`;
+        lines.push(`<div class="cto-muted">${carsText}</div>`);
 
-        lines.push(`<span class="cto-button" data-action="cargo" data-arg="${train.id}">${cargo?.trainId === train.id ? "Reload cargo" : "Show cargo"}</span>`);
-        if (cargo?.trainId === train.id) lines.push(renderCargo(cargo));
+        if (features.cargo) {
+            lines.push(`<span class="cto-button" data-action="cargo" data-arg="${train.id}">${cargo?.trainId === train.id ? "Reload cargo" : "Show cargo"}</span>`);
+            if (cargo?.trainId === train.id) lines.push(renderCargo(cargo));
+        }
         return lines.join("");
     });
 }
@@ -824,6 +851,7 @@ function showStationPopup(station) {
     openPopup(() => {
         const lines = [`<h3>${escapeHtml(station.name)}</h3>`];
         if (station.assembling) lines.push(`<div class="cto-muted">Assembly mode</div>`);
+        if (!features.stationArrivals) return lines.join("");
         const status = statusData?.stations?.[station.id];
         if (!status) return lines.concat(`<div class="cto-muted">Loading…</div>`).join("");
         if (status.presentTrain) lines.push(`<div>At platform: <b>${escapeHtml(trainName(status.presentTrain))}</b></div>`);
@@ -990,9 +1018,10 @@ Object.defineProperty(bluemapApp.mapViewer, "lastRedrawChange", {
 });
 
 applySettings();
-setTimeout(() => {
+fetchFeatures().then(() => {
     fetchAndRenderNetwork();
     connectTrainStream();
-    connectStatusStream();
+    // the status stream only carries signals and station arrivals
+    if (features.signals || features.stationArrivals) connectStatusStream();
     renderLoop();
-}, 0);
+});
