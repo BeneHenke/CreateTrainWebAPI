@@ -19,10 +19,12 @@ public class CreateTrainWebAPIMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     private final ApiServer apiServer = new ApiServer();
+    private final LiveSnapshots snapshots = new LiveSnapshots();
 
     public CreateTrainWebAPIMod() {
         // Register ourselves to the Forge event bus
         MinecraftForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(snapshots);
 
         // Register config
         ModLoadingContext.get().registerConfig(
@@ -37,7 +39,7 @@ public class CreateTrainWebAPIMod {
         int port = Config.SERVER_PORT.get();
         String trainModelPath = Config.TRAIN_MODEL_PATH.get();
 
-        apiServer.start(host, port, trainModelPath);
+        apiServer.start(host, port, trainModelPath, snapshots);
     }
 
     @SubscribeEvent

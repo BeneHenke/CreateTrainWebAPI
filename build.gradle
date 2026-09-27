@@ -28,10 +28,7 @@ repositories {
 }
 
 base {
-    base {
-        archivesName = "${mod_id}-${minecraft_version}"
-    }
-
+    archivesName = "${mod_id}-${minecraft_version}"
 }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)

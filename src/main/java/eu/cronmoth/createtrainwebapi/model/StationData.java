@@ -12,12 +12,15 @@ public class StationData {
     public double positionOnTrack;
     public NodeData node1;
     public NodeData node2;
+    public UUID graphId;
+
     public StationData(GlobalStation station, TrackGraph graph) {
         id = station.id;
-        name = station.name.toString();
+        name = station.name;
         assembling = station.assembling;
         positionOnTrack = station.position;
-        node1 = new NodeData(graph.locateNode(station.edgeLocation.getFirst()));
-        node2 = new NodeData(graph.locateNode(station.edgeLocation.getSecond()));
+        node1 = new NodeData(graph.locateNode(station.edgeLocation.getFirst()), graph.id);
+        node2 = new NodeData(graph.locateNode(station.edgeLocation.getSecond()), graph.id);
+        graphId = graph.id;
     }
 }
