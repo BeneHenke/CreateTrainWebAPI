@@ -23,6 +23,7 @@ When used together with https://github.com/BeneHenke/BluemapCreateEntityAddon th
 | `/trains`, `/trainsLive` (SSE, 200 ms) | Trains with position, speed, destination, schedule, route, owner, passengers. |
 | `/status`, `/statusLive` (SSE, 1 s) | Occupied and reserved signal blocks, signal states, and per station the train at the platform, the arriving train and the next arrivals. |
 | `/cargo?train=<id>` | Items and fluids per carriage (computed on request). |
+| `/features` | Which optional data is enabled in the config (see below). |
 | `/trainModels/…` | Train models from `trainModelPath`. |
 
 All data is read from Create on the server thread and cached, so requests never touch the game state directly.
@@ -37,4 +38,22 @@ serverPort = 8080
 serverHost = "0.0.0.0"
 #Path of the train models
 trainModelPath = "bluemap/train_models/"
+```
+
+### Optional data
+
+The `[data]` section of the config turns optional information on or off. Disabled data is not collected at all and is `null` in the answers; `/features` reports the current switches, and the BlueMap overlay hides whatever is disabled. Positions, tracks and stations are always included.
+
+```
+[data]
+	owner = true           # train owner (uuid and player name)
+	trainStatus = true     # speed, max speed, derailed
+	passengers = true      # number of players on board
+	navigation = true      # destination, distance to it, waiting at a signal
+	schedule = true        # schedule title, current stop, state, wait reason
+	route = true           # planned route to the destination
+	stationArrivals = true # per station: train at the platform, arriving train, next arrivals
+	signals = true         # signals, signal states and occupied signal blocks
+	portals = true         # track nodes linked through portals
+	cargo = true           # train inventories and tanks (/cargo)
 ```

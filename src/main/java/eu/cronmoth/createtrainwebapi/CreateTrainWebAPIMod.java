@@ -16,7 +16,7 @@ public class CreateTrainWebAPIMod implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
     private final ApiServer apiServer = new ApiServer();
-    private final LiveSnapshots snapshots = new LiveSnapshots();
+    private final LiveSnapshots snapshots = new LiveSnapshots(Config::dataOptions);
 
     @Override
     public void onInitialize() {
