@@ -3,6 +3,7 @@ package eu.cronmoth.createtrainwebapi.model;
 import com.simibubi.create.content.trains.display.GlobalTrainDisplayData;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.station.GlobalStation;
+import eu.cronmoth.createtrainwebapi.DataOptions;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -15,13 +16,28 @@ import java.util.UUID;
 
 /** Signal and station state, refreshed about once per second. */
 public class StatusData {
+    // Each group is null when disabled in the config (see DataOptions)
     /** Signal blocks with a train in them. */
-    public Set<UUID> occupiedGroups = new HashSet<>();
+    @Nullable
+    public Set<UUID> occupiedGroups;
     /** Signal blocks reserved for an approaching train. */
-    public Set<UUID> reservedGroups = new HashSet<>();
+    @Nullable
+    public Set<UUID> reservedGroups;
     /** Per signal id: RED/YELLOW/GREEN/INVALID for each side, in the order of {@link SignalData#sides}. */
-    public Map<UUID, List<String>> signals = new HashMap<>();
-    public Map<UUID, StationStatus> stations = new HashMap<>();
+    @Nullable
+    public Map<UUID, List<String>> signals;
+    @Nullable
+    public Map<UUID, StationStatus> stations;
+
+    public StatusData(DataOptions options) {
+        if (options.signals()) {
+            occupiedGroups = new HashSet<>();
+            reservedGroups = new HashSet<>();
+            signals = new HashMap<>();
+        }
+        if (options.stationArrivals())
+            stations = new HashMap<>();
+    }
 
     public static class StationStatus {
         @Nullable

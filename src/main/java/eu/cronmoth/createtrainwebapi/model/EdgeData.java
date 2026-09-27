@@ -19,7 +19,7 @@ public class EdgeData {
     public String material;
     /** Connects two dimensions through a portal. */
     public boolean interDimensional;
-    /** Parts of the edge between signals, each belonging to one signal block. Empty for portal edges. */
+    /** Parts of the edge between signals, each belonging to one signal block. Empty for portal edges, null when signals are disabled. */
     public List<SignalSegmentData> signalSegments;
 
     public EdgeData(TrackEdge trackEdge, boolean forwards, boolean backwards, TrackGraph graph, List<SignalSegmentData> signalSegments) {

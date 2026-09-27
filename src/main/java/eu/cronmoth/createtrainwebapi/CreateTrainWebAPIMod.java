@@ -19,7 +19,7 @@ public class CreateTrainWebAPIMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     private final ApiServer apiServer = new ApiServer();
-    private final LiveSnapshots snapshots = new LiveSnapshots();
+    private final LiveSnapshots snapshots = new LiveSnapshots(Config::dataOptions);
 
     public CreateTrainWebAPIMod() {
         // Register ourselves to the Forge event bus

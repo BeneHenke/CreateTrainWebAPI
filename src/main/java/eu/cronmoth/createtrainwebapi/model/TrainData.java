@@ -6,6 +6,7 @@ import com.simibubi.create.content.trains.entity.Navigation;
 import com.simibubi.create.content.trains.entity.Train;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import eu.cronmoth.createtrainwebapi.CreateTrainWebAPIMod;
+import eu.cronmoth.createtrainwebapi.DataOptions;
 import net.createmod.catnip.data.Couple;
 import net.minecraft.server.MinecraftServer;
 
@@ -35,24 +36,35 @@ public class TrainData {
     public List<TrainCarData> cars;
     public boolean backwards;
     public boolean stopped;
-    public boolean derailed;
+    // The following groups are null when disabled in the config (see DataOptions)
+    @Nullable
+    public Boolean derailed;
     /** Blocks per tick (x20 for blocks per second). */
-    public double speed;
-    public double targetSpeed;
-    public double maxSpeed;
-    public int passengers;
+    @Nullable
+    public Double speed;
+    @Nullable
+    public Double targetSpeed;
+    @Nullable
+    public Double maxSpeed;
+    @Nullable
+    public Integer passengers;
+    @Nullable
     public NavigationData navigation;
+    /** Also null for a train without a schedule. */
     @Nullable
     public ScheduleData schedule;
     /** Node ids of the planned route to the destination, as [from, to] pairs. Empty when not navigating. */
+    @Nullable
     public List<int[]> path;
 
     private static final Field CURRENT_PATH = findField(Navigation.class, "currentPath");
 
-    public TrainData(Train train, MinecraftServer server) {
+    public TrainData(Train train, MinecraftServer server, DataOptions options) {
         id = train.id;
-        owner = train.owner;
-        ownerName = owner == null ? null : server.getProfileCache().get(owner).map(GameProfile::getName).orElse(null);
+        if (options.owner()) {
+            owner = train.owner;
+            ownerName = owner == null ? null : server.getProfileCache().get(owner).map(GameProfile::getName).orElse(null);
+        }
         name = train.name.getString();
         icon = train.icon == null ? null : train.icon.getId().toString();
         mapColorIndex = train.mapColorIndex;
@@ -63,14 +75,20 @@ public class TrainData {
         }
         backwards = train.currentlyBackwards;
         stopped = train.speed == 0;
-        derailed = train.derailed;
-        speed = Math.abs(train.speed);
-        targetSpeed = Math.abs(train.targetSpeed);
-        maxSpeed = train.maxSpeed();
-        passengers = train.countPlayerPassengers();
-        navigation = new NavigationData(train.navigation);
-        schedule = train.runtime.getSchedule() == null ? null : new ScheduleData(train, server);
-        path = readPath(train);
+        if (options.trainStatus()) {
+            derailed = train.derailed;
+            speed = Math.abs(train.speed);
+            targetSpeed = Math.abs(train.targetSpeed);
+            maxSpeed = (double) train.maxSpeed();
+        }
+        if (options.passengers())
+            passengers = train.countPlayerPassengers();
+        if (options.navigation())
+            navigation = new NavigationData(train.navigation);
+        if (options.schedule() && train.runtime.getSchedule() != null)
+            schedule = new ScheduleData(train, server);
+        if (options.route())
+            path = readPath(train);
         cars = new ArrayList<>();
         for (Carriage carriage : train.carriages) {
             cars.add(new TrainCarData(carriage));
