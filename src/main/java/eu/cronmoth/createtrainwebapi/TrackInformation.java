@@ -1,56 +1,53 @@
 package eu.cronmoth.createtrainwebapi;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import com.simibubi.create.Create;
 import com.simibubi.create.content.trains.GlobalRailwayManager;
 import com.simibubi.create.content.trains.entity.Train;
+import com.simibubi.create.content.trains.graph.EdgePointType;
 import com.simibubi.create.content.trains.graph.TrackEdge;
 import com.simibubi.create.content.trains.graph.TrackGraph;
 import com.simibubi.create.content.trains.graph.TrackNode;
 import com.simibubi.create.content.trains.graph.TrackNodeLocation;
 import com.simibubi.create.content.trains.signal.SignalBoundary;
+import com.simibubi.create.content.trains.signal.SignalEdgeGroup;
 import com.simibubi.create.content.trains.signal.TrackEdgePoint;
 import com.simibubi.create.content.trains.station.GlobalStation;
-
 import eu.cronmoth.createtrainwebapi.model.*;
+import net.minecraft.server.MinecraftServer;
 
+import java.util.*;
+
+/** Reads Create's railway data. Must run on the server thread (see {@link LiveSnapshots}). */
 public class TrackInformation {
     public static GlobalRailwayManager railway = Create.RAILWAYS;
+    private static final int DEPARTURES_PER_STATION = 5;
 
-    public static List<TrainData> GetTrainData() {
-        Map<UUID, Train> trains = railway.trains;
+    public static List<TrainData> GetTrainData(MinecraftServer server) {
         List<TrainData> data = new ArrayList<>();
-        for (UUID uuid : trains.keySet()) {
-            Train train = trains.get(uuid);
-            data.add(new TrainData(train));
+        for (Train train : railway.trains.values()) {
+            data.add(new TrainData(train, server));
         }
         return data;
     }
 
     public static NetworkData GetNetworkData() {
-        Map<UUID, TrackGraph> graphs = railway.trackNetworks;
-        // For each graph, extract nodes and edges
         Set<NodeData> nodes = new HashSet<>();
         Set<EdgeData> edges = new HashSet<>();
         Set<StationData> stations = new HashSet<>();
-        for (UUID uuid : graphs.keySet()) {
-            TrackGraph trackGraph = graphs.get(uuid);
-            Set<TrackNodeLocation> trackNodes = trackGraph.getNodes();
+        List<SignalData> signals = new ArrayList<>();
+        List<NetworkInfoData> networks = new ArrayList<>();
+        List<PortalData> portals = new ArrayList<>();
+        for (TrackGraph trackGraph : railway.trackNetworks.values()) {
+            networks.add(new NetworkInfoData(trackGraph));
             Set<EdgeWrapper> trackEdges = new HashSet<>();
             // For each node, extract its data and connected edges
-            for (TrackNodeLocation trackNodeLocation : trackNodes) {
+            for (TrackNodeLocation trackNodeLocation : trackGraph.getNodes()) {
                 TrackNode node = trackGraph.locateNode(trackNodeLocation);
-                NodeData nodeData = new NodeData(node);
+                if (node == null)
+                    continue;
+                NodeData nodeData = new NodeData(node, trackGraph.id);
                 nodes.add(nodeData);
-                Map<TrackNode, TrackEdge> nodeEdgeMap = trackGraph.getConnectionsFrom(node);
-                // Find all edges
-                for (TrackEdge trackEdge : nodeEdgeMap.values()) {
+                for (TrackEdge trackEdge : trackGraph.getConnectionsFrom(node).values()) {
                     trackEdges.add(new EdgeWrapper(trackEdge));
                     if (trackEdge.isInterDimensional()) {
                         nodeData.interDimensional = true;
@@ -59,28 +56,70 @@ public class TrackInformation {
             }
             for (EdgeWrapper edgeWrapper : trackEdges) {
                 TrackEdge trackEdge = edgeWrapper.trackEdge;
-                List<TrackEdgePoint> edgePoints = trackEdge.getEdgeData().getPoints();
                 boolean forward = true;
                 boolean backward = true;
-                // Determine directionality based on edge points
-                for (TrackEdgePoint trackEdgePoint : edgePoints) {
-                    if (trackEdgePoint instanceof GlobalStation) {
-                        GlobalStation station = (GlobalStation) trackEdgePoint;
+                List<Double> signalPositions = new ArrayList<>();
+                for (TrackEdgePoint trackEdgePoint : trackEdge.getEdgeData().getPoints()) {
+                    if (trackEdgePoint instanceof GlobalStation station) {
                         stations.add(new StationData(station, trackGraph));
-                    }
-                    else if (trackEdgePoint instanceof SignalBoundary) {
+                    } else if (trackEdgePoint instanceof SignalBoundary signalBoundary) {
                         //Block Entity Maps hold enttities for each direction. CanNavigate checks if both direction are set.
-                        SignalBoundary signalBoundary = (SignalBoundary) trackEdgePoint;
                         if (signalBoundary.blockEntities.either(Map::isEmpty)) {
                             forward = !signalBoundary.canNavigateVia(trackEdge.node1);
                             backward = !signalBoundary.canNavigateVia(trackEdge.node2);
                         }
+                        signals.add(new SignalData(signalBoundary, trackEdge));
+                        signalPositions.add(signalBoundary.getLocationOn(trackEdge));
                     }
                 }
-                edges.add(new EdgeData(trackEdge, forward, backward));
+                edges.add(new EdgeData(trackEdge, forward, backward, trackGraph, signalSegments(trackEdge, trackGraph, signalPositions)));
+                if (trackEdge.isInterDimensional()) {
+                    portals.add(new PortalData(trackEdge));
+                }
             }
-
         }
-        return new NetworkData(nodes, edges, stations);
+        return new NetworkData(nodes, edges, stations, signals, networks, portals);
+    }
+
+    /** Splits an edge at its signals; each part belongs to the signal block Create reports for its middle. */
+    private static List<SignalSegmentData> signalSegments(TrackEdge edge, TrackGraph graph, List<Double> signalPositions) {
+        List<SignalSegmentData> segments = new ArrayList<>();
+        if (edge.isInterDimensional())
+            return segments;
+        double length = edge.getLength();
+        List<Double> bounds = new ArrayList<>();
+        bounds.add(0.0);
+        signalPositions.stream().sorted().forEach(bounds::add);
+        bounds.add(length);
+        for (int i = 0; i + 1 < bounds.size(); i++) {
+            double start = bounds.get(i);
+            double end = bounds.get(i + 1);
+            if (end - start < 1e-6)
+                continue;
+            UUID group = edge.getEdgeData().getGroupAtPosition(graph, (start + end) / 2);
+            segments.add(new SignalSegmentData(start, end, group));
+        }
+        return segments;
+    }
+
+    public static StatusData GetStatusData() {
+        StatusData status = new StatusData();
+        for (SignalEdgeGroup group : railway.signalEdgeGroups.values()) {
+            if (!group.trains.isEmpty()) {
+                status.occupiedGroups.add(group.id);
+            } else if (group.reserved != null) {
+                status.reservedGroups.add(group.id);
+            }
+        }
+        // arrival predictions are refreshed by Create itself every 100 ticks (5 s)
+        for (TrackGraph trackGraph : railway.trackNetworks.values()) {
+            for (SignalBoundary signal : trackGraph.getPoints(EdgePointType.SIGNAL)) {
+                status.signals.put(signal.id, List.of(signal.cachedStates.getFirst().name(), signal.cachedStates.getSecond().name()));
+            }
+            for (GlobalStation station : trackGraph.getPoints(EdgePointType.STATION)) {
+                status.stations.put(station.id, new StatusData.StationStatus(station, DEPARTURES_PER_STATION));
+            }
+        }
+        return status;
     }
 }
